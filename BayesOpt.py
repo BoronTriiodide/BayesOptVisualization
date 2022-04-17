@@ -172,7 +172,7 @@ class BayesianOptimizer:
 		priorMean = self.getPriorMean(relCov, leftCovSolution)
 		priorStdDev = self.getPriorVariance(samplePoint, relCov, covCholesky, varScale)**0.5
 		normalArg = (priorMean - self.optimum[1])/(max(1e-7, priorStdDev))
-		return -1*(normalArg*priorStdDev + priorStdDev*self.getStandardNormalDensity(normalArg) - normalArg*priorStdDev*self.getStandardCumDist(normalArg))
+		return -1*(max(0,normalArg*priorStdDev) + priorStdDev*self.getStandardNormalDensity(normalArg) - normalArg*priorStdDev*self.getStandardCumDist(normalArg))
 
 	def getNegEIJacobian(self, samplePoint, leftCovSolution, covCholesky, varScale, taskToCurrentKernel):
 		relCov = self.getRelCovKernel(samplePoint, taskToCurrentKernel)
@@ -184,7 +184,8 @@ class BayesianOptimizer:
 			relCovDeriv = self.getRelCovDeriv(samplePoint, i, relCov)
 			priorMeanDeriv = self.getPriorMean(relCovDeriv, leftCovSolution)
 			priorDevDeriv = self.getPriorVariance(samplePoint, relCovDeriv, covCholesky, varScale) / (2 * priorStdDev)
-			jacobian[i] = -1*(priorMeanDeriv + (priorDevDeriv * self.getStandardNormalDensity(normalArg) + (normalArg**2 - normalArg*priorMeanDeriv)*self.getStandardNormalDensity(normalArg)) - (priorMeanDeriv * self.getStandardCumDist(normalArg) + self.getStandardNormalDensity(normalArg)*(normalArg*priorMeanDeriv - normalArg**2)))
+			firstMeanDeriv = priorMeanDeriv if priorMean > self.optimum[1] else 0
+			jacobian[i] = -1*(firstMeanDeriv + (priorDevDeriv * self.getStandardNormalDensity(normalArg) + (normalArg**2 - normalArg*priorMeanDeriv)*self.getStandardNormalDensity(normalArg)) - (priorMeanDeriv * self.getStandardCumDist(normalArg) + self.getStandardNormalDensity(normalArg)*(normalArg*priorMeanDeriv - normalArg**2)))
 		return jacobian
 
 	def getEIAcquisition(self):
@@ -307,7 +308,7 @@ def doVisualization(seed):
 	plt.tight_layout()
 	plt.show()
 	opt = BayesianOptimizer(param_dom, prob, 0, ax)
-	for i in range(20):
+	for i in range(30):
 		_ = input()
 		for axis in ax:
 			axis.clear()
